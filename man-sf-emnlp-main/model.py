@@ -28,23 +28,23 @@ class attn(nn.Module):
 class GAT(nn.Module):
     def __init__(self, nfeat, nhid, nclass, dropout, alpha, nheads, stock_num):
         super(GAT, self).__init__()
-        self.grup = [gru(3,64) for _ in range(stock_num)]
+        self.grup = [gru(3,64) for _ in range(stock_num)] # price encoder (每支股票一個encoder唷!)
         for i,gru_p in enumerate(self.grup):
             self.add_module('gru_p{}'.format(i), gru_p)
 
-        self.attnp = [attn(64,64) for _ in range(stock_num)]
+        self.attnp = [attn(64,64) for _ in range(stock_num)] # price attention (temporal?)
         for i,attn_p in enumerate(self.attnp):
             self.add_module('attn_p{}'.format(i), attn_p)
 
-        self.tweet_gru = [gru(512,64) for _ in range(stock_num)]
+        self.tweet_gru = [gru(512,64) for _ in range(stock_num)] # tweet encoder
         for i,tweet_gru_ in enumerate(self.tweet_gru):
             self.add_module('tweet_gru{}'.format(i), tweet_gru_)
 
-        self.grut = [gru(64, 64) for _ in range(stock_num)]
+        self.grut = [gru(64, 64) for _ in range(stock_num)] 
         for i,gru_t in enumerate(self.grut):
             self.add_module('gru_t{}'.format(i), gru_t)
 
-        self.attn_tweet = [attn(64,64) for _ in range(stock_num)]
+        self.attn_tweet = [attn(64,64) for _ in range(stock_num)] # tweet attention (hierarchical?)
         for i,attn_tweet_ in enumerate(self.attn_tweet):
             self.add_module('attn_tweet{}'.format(i), attn_tweet_)
 
@@ -76,10 +76,10 @@ class GAT(nn.Module):
         self.out_att = GraphAttentionLayer(nhid * nheads, nclass, dropout=dropout, alpha=alpha, concat=False)
     def forward(self, text_input, price_input, adj):
         li = []
-        num_tw = text_input.size(2)
-        num_d = price_input.size(1)
-        pr_ft = price_input.size(2)
-        num_stocks = price_input.size(0)
+        num_tw = text_input.size(2) # size(2) 為 一天幾則推文
+        num_d = price_input.size(1) # size(1) 為 window size=5
+        pr_ft = price_input.size(2) # size(2) 為 [high, low, close]等股價
+        num_stocks = price_input.size(0) # size(0) 為 有幾支股票
         for i in range(price_input.size(0)):
             x = self.grup[i](price_input[i,:,:].reshape((1,num_d,pr_ft)))
             x = self.attnp[i](*x).reshape((1,64))
