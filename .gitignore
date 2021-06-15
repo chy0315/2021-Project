@@ -1,5 +1,7 @@
 .ipynb_checkpoints
+*.zip
 relation/
+preprocessed
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
