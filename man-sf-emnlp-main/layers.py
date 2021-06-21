@@ -30,6 +30,20 @@ class GraphAttentionLayer(nn.Module):
 
         a_input = torch.cat([h.repeat(1, N).view(N * N, -1), h.repeat(N, 1)], dim=1).view(N, -1, 2 * self.out_features)
         e = self.leakyrelu(torch.matmul(a_input, self.a).squeeze(2))
+        # print('--- layers.py ---')
+        # print('a_input:', a_input.size()) #torch.Size([88, 88, 128])
+        # print('self.a:', self.a.size()) #torch.Size([128, 1])
+        # print('e:', e.size()) #[88,88,1] + squeeze() -> torch.Size([88, 88])
+        # print(e)
+        ''' e: torch.Size([88, 88])
+        tensor([[ 0.3017,  0.1119,  0.2561,  ...,  0.1689,  0.0477,  0.4322],
+                [ 0.2517,  0.0619,  0.2062,  ...,  0.1190, -0.0005,  0.3822],
+                [-0.0078, -0.0457, -0.0169,  ..., -0.0343, -0.0586,  0.0917],
+                ...,
+                [ 0.0896, -0.0200,  0.0441,  ..., -0.0086, -0.0329,  0.2202],
+                [-0.0438, -0.0817, -0.0529,  ..., -0.0703, -0.0946, -0.0177],
+                [ 0.0506, -0.0278,  0.0050,  ..., -0.0164, -0.0407,  0.1811]],
+            device='cuda:0', grad_fn=<LeakyReluBackward0>) '''
 
         zero_vec = -9e15*torch.ones_like(e)
         attention = torch.where(adj > 0, e, zero_vec)
@@ -110,7 +124,10 @@ class SpGraphAttentionLayer(nn.Module):
         edge_h = torch.cat((h[edge[0, :], :], h[edge[1, :], :]), dim=1).t()
         # edge: 2*D x E
 
-        edge_e = torch.exp(-self.leakyrelu(self.a.mm(edge_h).squeeze()))
+        edge_e = torch.exp(-self.leakyrelu(self.a.mm(edge_h).squeeze())) # edge_e is torch.Size([5852])
+        print('edge_e:', edge_e.size())
+        print('nan count',torch.isnan(edge_e.view(-1)).sum())
+        
         assert not torch.isnan(edge_e).any()
         # edge_e: E
 

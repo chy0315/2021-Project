@@ -69,18 +69,18 @@ class GAT(nn.Module):
             self.add_module('linear_x{}'.format(i), linear_x_)
             
         self.dropout = dropout
-        self.attentions = [GraphAttentionLayer(nfeat, nhid, dropout=dropout, alpha=alpha, concat=True) for _ in range(nheads)]
+        self.attentions = [GraphAttentionLayer(nfeat, nhid, dropout=dropout, alpha=alpha, concat=True) for _ in range(nheads)] # GAT
         for i, attention in enumerate(self.attentions):
             self.add_module('attention_{}'.format(i), attention)
 
-        self.out_att = GraphAttentionLayer(nhid * nheads, nclass, dropout=dropout, alpha=alpha, concat=False)
+        self.out_att = GraphAttentionLayer(nhid * nheads, nclass, dropout=dropout, alpha=alpha, concat=False) # GAT
     def forward(self, text_input, price_input, adj):
         li = []
         num_tw = text_input.size(2) # size(2) 為 一天幾則推文
         num_d = price_input.size(1) # size(1) 為 window size=5
         pr_ft = price_input.size(2) # size(2) 為 [high, low, close]等股價
         num_stocks = price_input.size(0) # size(0) 為 有幾支股票
-        for i in range(price_input.size(0)):
+        for i in range(num_stocks):
             x = self.grup[i](price_input[i,:,:].reshape((1,num_d,pr_ft)))
             x = self.attnp[i](*x).reshape((1,64))
             # x = self.layer_normp[i](x).reshape(1,64)
@@ -99,7 +99,16 @@ class GAT(nn.Module):
         ft_vec = torch.cat(li)
         out_1 = F.tanh(self.linear_x[i](ft_vec))
         x = F.dropout(ft_vec, self.dropout, training=self.training)
-        x = torch.cat([att(x, adj) for att in self.attentions], dim=1)
+        # print('--- model.py ---')
+        # print('text_input size:', text_input.size()) # torch.Size([5, 88, 10, 512]) -> 要改成 torch.Size([88, 5, 10, 512])
+        # print('price_input size:', price_input.size()) # torch.Size([5, 88, 3]) -> 要改成 torch.Size([88, 5, 3])
+        # print('num_tw:', num_tw) # 10
+        # print('num_d:', num_d) # 5
+        # print('pr_ft:', pr_ft) # 3
+        # print('num_stocks:', num_stocks) # 88
+        # print('out_1:', out_1.size()) # torch.Size([88, 2])
+        # print('feature_vector dropout:', x.size()) # torch.Size([88, 64])
+        x = torch.cat([att(x, adj) for att in self.attentions], dim=1) # GraphAttentionLayer 1
         x = F.dropout(x, self.dropout, training=self.training)
-        x = F.elu(self.out_att(x, adj))
+        x = F.elu(self.out_att(x, adj)) # GraphAttentionLayer 2
         return x+out_1
