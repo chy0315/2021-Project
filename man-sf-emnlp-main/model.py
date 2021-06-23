@@ -111,4 +111,5 @@ class GAT(nn.Module):
         x = torch.cat([att(x, adj) for att in self.attentions], dim=1) # GraphAttentionLayer 1
         x = F.dropout(x, self.dropout, training=self.training)
         x = F.elu(self.out_att(x, adj)) # GraphAttentionLayer 2
+        x = F.softmax(x, dim=1)
         return x+out_1
